@@ -156,18 +156,25 @@ const RequirementList = () => {
       render: (score) => getPriorityTag(score),
     },
     {
-      title: '商业价值',
-      dataIndex: 'business_value_score',
-      key: 'business_value_score',
+      title: '普适性',
+      dataIndex: 'universality_score',
+      key: 'universality_score',
       width: 100,
-      render: (score) => score.toFixed(1),
+      render: (score) => (score || 0).toFixed(1),
     },
     {
-      title: '用户影响',
-      dataIndex: 'user_impact_score',
-      key: 'user_impact_score',
+      title: '竞品对比',
+      dataIndex: 'competitor_score',
+      key: 'competitor_score',
       width: 100,
-      render: (score) => score.toFixed(1),
+      render: (score) => (score || 0).toFixed(1),
+    },
+    {
+      title: '收益潜力',
+      dataIndex: 'revenue_score',
+      key: 'revenue_score',
+      width: 100,
+      render: (score) => (score || 0).toFixed(1),
     },
     {
       title: '创建时间',
@@ -326,12 +333,6 @@ const RequirementList = () => {
               )}
               {selectedRequirement.implementation_cost && (
                 <p><strong>实现成本：</strong>{selectedRequirement.implementation_cost}</p>
-              )}
-              {selectedRequirement.urgency_level && (
-                <p><strong>紧急程度：</strong>{selectedRequirement.urgency_level} / 5</p>
-              )}
-              {selectedRequirement.competitor_info && (
-                <p><strong>竞品信息：</strong>{selectedRequirement.competitor_info}</p>
               )}
             </Card>
 

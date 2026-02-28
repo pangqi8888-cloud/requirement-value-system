@@ -1,211 +1,160 @@
-import random
+import json
+import requests
 from typing import Dict
 from app.schemas.requirement import EvaluationScore
 
+# 千问 API 配置
+QWEN_API_KEY = "sk-929c71ee1b344b32a1a5373351039a34"
+QWEN_API_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
+MODEL_NAME = "qwen-turbo"
+
+
 class AIEvaluationService:
-    """AI 评估服务 - Mock 版本"""
+    """AI 评估服务 - 千问版本"""
 
     def __init__(self):
-        # 各维度权重配置
-        self.weights = {
-            "business_value": 0.30,
-            "user_impact": 0.25,
-            "cost": 0.20,
-            "urgency": 0.15,
-            "competitor": 0.10
-        }
+        pass
 
     def evaluate_requirement(self, requirement_data: Dict) -> EvaluationScore:
         """
         评估需求价值
-        Mock 版本：基于规则生成评分
+        由 AI 完全自主判断：普适性、竞品对比、收益潜力
         """
-        # 1. 商业价值评分
-        business_value_score = self._evaluate_business_value(requirement_data)
+        # 调用千问进行综合评估
+        ai_result = self._call_qwen_evaluation(requirement_data)
 
-        # 2. 用户影响评分
-        user_impact_score = self._evaluate_user_impact(requirement_data)
-
-        # 3. 成本评分（成本越低分数越高）
-        cost_score = self._evaluate_cost(requirement_data)
-
-        # 4. 紧急程度评分
-        urgency_score = self._evaluate_urgency(requirement_data)
-
-        # 5. 竞品对比评分
-        competitor_score = self._evaluate_competitor(requirement_data)
-
-        # 6. 计算综合得分
-        total_score = (
-            business_value_score * self.weights["business_value"] +
-            user_impact_score * self.weights["user_impact"] +
-            cost_score * self.weights["cost"] +
-            urgency_score * self.weights["urgency"] +
-            competitor_score * self.weights["competitor"]
-        )
-
-        # 7. 生成推荐理由
-        ai_recommendation = self._generate_recommendation(
-            total_score,
-            business_value_score,
-            user_impact_score,
-            cost_score,
-            urgency_score,
-            competitor_score,
-            requirement_data
-        )
-
-        return EvaluationScore(
-            business_value_score=round(business_value_score, 2),
-            user_impact_score=round(user_impact_score, 2),
-            cost_score=round(cost_score, 2),
-            urgency_score=round(urgency_score, 2),
-            competitor_score=round(competitor_score, 2),
-            total_score=round(total_score, 2),
-            ai_recommendation=ai_recommendation
-        )
-
-    def _evaluate_business_value(self, data: Dict) -> float:
-        """评估商业价值"""
-        score = 50.0  # 基础分
-
-        # 根据预期收益内容长度和关键词评分
-        expected_benefit = data.get("expected_benefit", "")
-        if expected_benefit:
-            score += min(len(expected_benefit) / 20, 20)  # 最多加20分
-
-            # 关键词加分
-            keywords = ["收入", "营收", "利润", "市场份额", "转化率", "留存", "GMV"]
-            for keyword in keywords:
-                if keyword in expected_benefit:
-                    score += 5
-
-        # 业务背景加分
-        if data.get("business_background"):
-            score += 10
-
-        return min(score, 100)
-
-    def _evaluate_user_impact(self, data: Dict) -> float:
-        """评估用户影响"""
-        score = 40.0
-
-        # 影响用户数评分
-        affected_users = data.get("affected_user_count", 0)
-        if affected_users:
-            if affected_users > 100000:
-                score += 40
-            elif affected_users > 10000:
-                score += 30
-            elif affected_users > 1000:
-                score += 20
-            else:
-                score += 10
-
-        # 目标用户描述加分
-        if data.get("target_users"):
-            score += 15
-
-        return min(score, 100)
-
-    def _evaluate_cost(self, data: Dict) -> float:
-        """评估实现成本（成本越低分数越高）"""
-        score = 70.0
-
-        cost_str = data.get("implementation_cost", "").lower()
-
-        if "高" in cost_str or "复杂" in cost_str or "困难" in cost_str:
-            score -= 30
-        elif "中" in cost_str or "适中" in cost_str:
-            score -= 15
-        elif "低" in cost_str or "简单" in cost_str or "容易" in cost_str:
-            score += 10
-
-        return max(min(score, 100), 0)
-
-    def _evaluate_urgency(self, data: Dict) -> float:
-        """评估紧急程度"""
-        urgency_level = data.get("urgency_level", 3)
-
-        # 紧急程度 1-5 映射到 20-100 分
-        score = 20 + (urgency_level - 1) * 20
-
-        return score
-
-    def _evaluate_competitor(self, data: Dict) -> float:
-        """评估竞品对比"""
-        score = 50.0
-
-        competitor_info = data.get("competitor_info", "")
-
-        if not competitor_info:
-            return score
-
-        # 关键词分析
-        if "领先" in competitor_info or "超越" in competitor_info:
-            score += 30
-        elif "对齐" in competitor_info or "追平" in competitor_info:
-            score += 20
-        elif "落后" in competitor_info or "缺失" in competitor_info:
-            score += 40  # 竞品有我们没有，优先级更高
-
-        return min(score, 100)
-
-    def _generate_recommendation(
-        self,
-        total_score: float,
-        business_value: float,
-        user_impact: float,
-        cost: float,
-        urgency: float,
-        competitor: float,
-        data: Dict
-    ) -> str:
-        """生成推荐理由"""
-
-        # 优先级判断
-        if total_score >= 80:
-            priority = "高优先级"
-            action = "强烈建议立即启动"
-        elif total_score >= 60:
-            priority = "中优先级"
-            action = "建议近期排期"
+        if ai_result:
+            return ai_result
         else:
-            priority = "低优先级"
-            action = "可延后处理"
+            # API 失败时的默认响应
+            return EvaluationScore(
+                universality_score=50.0,
+                competitor_score=50.0,
+                revenue_score=50.0,
+                total_score=50.0,
+                ai_recommendation="AI 评估服务暂时不可用，请稍后重试。"
+            )
 
-        # 找出最高分维度
-        scores = {
-            "商业价值": business_value,
-            "用户影响": user_impact,
-            "实现成本": cost,
-            "紧急程度": urgency,
-            "竞品对比": competitor
+    def _call_qwen(self, prompt: str) -> str:
+        """调用千问 API"""
+        headers = {
+            "Authorization": f"Bearer {QWEN_API_KEY}",
+            "Content-Type": "application/json"
         }
-        max_dimension = max(scores, key=scores.get)
+        
+        payload = {
+            "model": MODEL_NAME,
+            "messages": [
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": 0.7
+        }
 
-        recommendation = f"【{priority}】综合评分 {total_score:.1f} 分，{action}。\n\n"
-        recommendation += f"核心优势：{max_dimension}得分最高（{scores[max_dimension]:.1f}分）。\n\n"
+        try:
+            response = requests.post(
+                QWEN_API_URL,
+                headers=headers,
+                json=payload,
+                timeout=60
+            )
+            response.raise_for_status()
+            result = response.json()
+            return result["choices"][0]["message"]["content"]
+        except Exception as e:
+            print(f"千问 API 调用失败: {e}")
+            return None
 
-        # 详细分析
-        if business_value >= 70:
-            recommendation += "✓ 商业价值显著，预期能带来可观收益。\n"
-        if user_impact >= 70:
-            recommendation += "✓ 用户影响面广，能提升大量用户体验。\n"
-        if cost >= 70:
-            recommendation += "✓ 实现成本较低，投入产出比高。\n"
-        if urgency >= 70:
-            recommendation += "✓ 紧急程度高，需要优先处理。\n"
-        if competitor >= 70:
-            recommendation += "✓ ���品对比有优势，有助于提升竞争力。\n"
+    def _call_qwen_evaluation(self, data: Dict) -> EvaluationScore:
+        """调用千问进行综合评估"""
 
-        # 风险提示
-        if cost < 50:
-            recommendation += "\n⚠ 注意：实现成本较高，需评估资源投入。"
-        if user_impact < 50:
-            recommendation += "\n⚠ 注意：用户影响面有��，需权衡优先级。"
+        # 构建需求信息
+        requirement_info = f"""
+## 需求信息
 
-        return recommendation
+**标题：** {data.get('title', '未命名')}
+**类型：** {data.get('type', '未指定')}
+**描述：** {data.get('description', '无')}
+**业务背景：** {data.get('business_background', '无')}
+**预期收益：** {data.get('expected_benefit', '无')}
+**实现成本描述：** {data.get('implementation_cost', '无')}
+"""
+
+        prompt = f"""你是一个专业的需求分析和产品策略专家。请对以下需求进行深度分析评估。
+
+{requirement_info}
+
+## 评估要求
+
+你需要从以下三个维度进行评估，每个维度给出 0-100 的分数：
+
+### 1. 普适性评估 (universality_score)
+分析这个需求在该场景下是否具有普适性：
+- 是否是大多数用户都会用到的功能
+- 是否解决了普遍存在的痛点
+- 是否具有通用价值，而非小众需求
+
+### 2. 竞品对比分析 (competitor_score)
+你需要分析国内和海外 TOP3 的主流安全厂商的同类产品能力：
+- **国内安全厂商**：奇安信、深信服、绿盟科技
+- **海外安全厂商**：Palo Alto Networks、Fortinet、Cisco Secure
+
+结合这些厂商的能力情况，评估我们做这个需求的价值：
+- 如果竞品都没有而我们有，是领先机会
+- 如果竞品都有我们需要跟进，是必要需求
+- 如果竞品做得很好我们可以借鉴，是优化机会
+
+### 3. 收益潜力评估 (revenue_score)
+结合业务背景和预期收益，评估这个需求能带来的规模收益：
+- 能否带来直接收入增长
+- 能否提升用户留存/转化
+- 能否降低运营成本
+- 能否增强产品竞争力
+
+## 输出格式
+
+请严格按照以下 JSON 格式输出评估结果：
+
+```json
+{{
+  "universality_score": 85,
+  "competitor_score": 70,
+  "revenue_score": 80,
+  "total_score": 78,
+  "recommendation": "这里是你对需求的综合评估和建议，包含：1.需求价值总结 2.优先级建议 3.实施建议 4.风险提示"
+}}
+```
+
+要求：
+1. total_score = (universality_score + competitor_score + revenue_score) / 3
+2. recommendation 部分用中文，包含你对需求的完整分析和建议
+3. 重点说明这个需求是否值得做，给出明确的优先级判断
+4. 如果涉及安全厂商的竞品分析，请给出具体分析
+
+请直接输出 JSON，不要有其他内容："""
+
+        ai_result = self._call_qwen(prompt)
+        
+        if ai_result:
+            try:
+                # 提取 JSON
+                json_start = ai_result.find('{')
+                json_end = ai_result.rfind('}') + 1
+                if json_start >= 0 and json_end > json_start:
+                    json_str = ai_result[json_start:json_end]
+                    result = json.loads(json_str)
+                    
+                    return EvaluationScore(
+                        universality_score=round(result.get('universality_score', 50), 2),
+                        competitor_score=round(result.get('competitor_score', 50), 2),
+                        revenue_score=round(result.get('revenue_score', 50), 2),
+                        total_score=round(result.get('total_score', 50), 2),
+                        ai_recommendation=result.get('recommendation', '评估完成')
+                    )
+            except Exception as e:
+                print(f"解析 AI 结果失败: {e}")
+                print(f"原始输出: {ai_result}")
+        
+        return None
 
 
 # 全局实例

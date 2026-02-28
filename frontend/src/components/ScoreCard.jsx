@@ -12,12 +12,11 @@ import {
 const ScoreCard = ({ requirement }) => {
   if (!requirement) return null;
 
+  // 新版评估维度
   const radarData = [
-    { subject: '商业价值', score: requirement.business_value_score, fullMark: 100 },
-    { subject: '用户影响', score: requirement.user_impact_score, fullMark: 100 },
-    { subject: '实现成本', score: requirement.cost_score, fullMark: 100 },
-    { subject: '紧急程度', score: requirement.urgency_score, fullMark: 100 },
+    { subject: '普适性', score: requirement.universality_score || requirement.business_value_score, fullMark: 100 },
     { subject: '竞品对比', score: requirement.competitor_score, fullMark: 100 },
+    { subject: '收益潜力', score: requirement.revenue_score || requirement.user_impact_score, fullMark: 100 },
   ];
 
   const getScoreColor = (score) => {
@@ -47,7 +46,7 @@ const ScoreCard = ({ requirement }) => {
         <Col span={12}>
           <div style={{ textAlign: 'center', marginBottom: 16 }}>
             <div style={{ fontSize: 48, fontWeight: 'bold', color: getScoreColor(requirement.total_score) }}>
-              {requirement.total_score.toFixed(1)}
+              {requirement.total_score?.toFixed(1) || '0.0'}
             </div>
             <div style={{ fontSize: 16, color: '#666' }}>综合得分</div>
           </div>
@@ -60,14 +59,14 @@ const ScoreCard = ({ requirement }) => {
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                   <span>{item.subject}</span>
                   <span style={{ fontWeight: 'bold', color: getScoreColor(item.score) }}>
-                    {item.score.toFixed(1)}
+                    {(item.score || 0).toFixed(1)}
                   </span>
                 </div>
                 <div style={{ height: 8, background: '#f0f0f0', borderRadius: 4, overflow: 'hidden' }}>
                   <div
                     style={{
                       height: '100%',
-                      width: `${item.score}%`,
+                      width: `${item.score || 0}%`,
                       background: getScoreColor(item.score),
                       transition: 'width 0.3s',
                     }}
@@ -100,7 +99,7 @@ const ScoreCard = ({ requirement }) => {
         <>
           <Divider />
           <div>
-            <h4>AI 推荐理由</h4>
+            <h4>AI 评估建议</h4>
             <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.8, color: '#666' }}>
               {requirement.ai_recommendation}
             </div>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Modal, Form, Input, Select, InputNumber, message } from 'antd';
+import { Modal, Form, Input, Select, message } from 'antd';
 import { requirementService } from '../services/api';
 
 const { TextArea } = Input;
@@ -50,7 +50,6 @@ const RequirementForm = ({ visible, onClose, onSuccess }) => {
         layout="vertical"
         initialValues={{
           type: 'feature',
-          urgency_level: 3,
         }}
       >
         <Form.Item
@@ -78,21 +77,14 @@ const RequirementForm = ({ visible, onClose, onSuccess }) => {
           name="description"
           rules={[{ required: true, message: '请输入需求描述' }]}
         >
-          <TextArea rows={4} placeholder="详细描述需求内容" />
+          <TextArea rows={4} placeholder="详细描述需求内容、功能点、实现方案等" />
         </Form.Item>
 
         <Form.Item
           label="业务背景"
           name="business_background"
         >
-          <TextArea rows={3} placeholder="说明需求的业务背景和原因" />
-        </Form.Item>
-
-        <Form.Item
-          label="目标用户"
-          name="target_users"
-        >
-          <Input placeholder="例如：企业用户、个人用户、管理员等" />
+          <TextArea rows={3} placeholder="说明需求的业务背景和原因，为什么要做这个需求" />
         </Form.Item>
 
         <Form.Item
@@ -101,18 +93,7 @@ const RequirementForm = ({ visible, onClose, onSuccess }) => {
         >
           <TextArea
             rows={3}
-            placeholder="描述预期带来的收益，如：提升转化率、增加营收、提高用户满意度等"
-          />
-        </Form.Item>
-
-        <Form.Item
-          label="影响用户数"
-          name="affected_user_count"
-        >
-          <InputNumber
-            min={0}
-            style={{ width: '100%' }}
-            placeholder="预计影响的用户数量"
+            placeholder="描述预期带来的收益，如：提升安全能力、增加营收、提高用户满意度等"
           />
         </Form.Item>
 
@@ -120,33 +101,9 @@ const RequirementForm = ({ visible, onClose, onSuccess }) => {
           label="实现成本估算"
           name="implementation_cost"
         >
-          <Select placeholder="选择实现成本">
-            <Option value="低">低（1-3 人天）</Option>
-            <Option value="中">中（3-10 人天）</Option>
-            <Option value="高">高（10+ 人天）</Option>
-          </Select>
-        </Form.Item>
-
-        <Form.Item
-          label="紧急程度"
-          name="urgency_level"
-        >
-          <Select>
-            <Option value={1}>1 - 不紧急</Option>
-            <Option value={2}>2 - 较低</Option>
-            <Option value={3}>3 - 一般</Option>
-            <Option value={4}>4 - 较高</Option>
-            <Option value={5}>5 - 非常紧急</Option>
-          </Select>
-        </Form.Item>
-
-        <Form.Item
-          label="竞品对比信息"
-          name="competitor_info"
-        >
           <TextArea
-            rows={3}
-            placeholder="描述竞品的相关功能情况，如：竞品已有此功能、我们领先、我们落后等"
+            rows={2}
+            placeholder="描述预计需要的开发工作量，如：2周、3个人月、需要额外采购设备等"
           />
         </Form.Item>
       </Form>
