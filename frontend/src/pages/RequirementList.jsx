@@ -12,16 +12,22 @@ import {
   Statistic,
   Row,
   Col,
+  Dropdown,
+  Avatar,
 } from 'antd';
 import {
   PlusOutlined,
   ReloadOutlined,
   EyeOutlined,
   DeleteOutlined,
+  ExportOutlined,
+  LogoutOutlined,
+  UserOutlined,
 } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import RequirementForm from '../components/RequirementForm';
 import ScoreCard from '../components/ScoreCard';
-import { requirementService } from '../services/api';
+import { requirementService, authService } from '../services/api';
 
 const { Header, Content } = Layout;
 const { Option } = Select;
@@ -34,10 +40,59 @@ const RequirementList = () => {
   const [selectedRequirement, setSelectedRequirement] = useState(null);
   const [sortBy, setSortBy] = useState('total_score');
   const [order, setOrder] = useState('desc');
+  const navigate = useNavigate();
+  const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
+    // 获取当前用户信息
+    const user = authService.getUser();
+    setCurrentUser(user);
     fetchRequirements();
   }, [sortBy, order]);
+
+  // 导出需求
+  const handleExport = async () => {
+    try {
+      const blob = await requirementService.exportRequirements('csv');
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `requirements_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      message.success('导出成功！');
+    } catch (error) {
+      console.error('导出失败:', error);
+      message.error('导出失败');
+    }
+  };
+
+  // 登出
+  const handleLogout = () => {
+    authService.logout();
+    navigate('/login');
+  };
+
+  // 用户菜单
+  const userMenuItems = [
+    {
+      key: 'profile',
+      icon: <UserOutlined />,
+      label: currentUser?.full_name || currentUser?.username || '用户',
+      disabled: true,
+    },
+    {
+      type: 'divider',
+    },
+    {
+      key: 'logout',
+      icon: <LogoutOutlined />,
+      label: '退出登录',
+      onClick: handleLogout,
+    },
+  ];
 
   const fetchRequirements = async () => {
     setLoading(true);
@@ -228,6 +283,12 @@ const RequirementList = () => {
           <h1 style={{ margin: 0, fontSize: 24 }}>需求价值评估系统</h1>
           <Space>
             <Button
+              icon={<ExportOutlined />}
+              onClick={handleExport}
+            >
+              导出
+            </Button>
+            <Button
               type="primary"
               icon={<PlusOutlined />}
               onClick={() => setFormVisible(true)}
@@ -237,6 +298,11 @@ const RequirementList = () => {
             <Button icon={<ReloadOutlined />} onClick={fetchRequirements}>
               刷新
             </Button>
+            <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
+              <Button icon={<UserOutlined />}>
+                {currentUser?.full_name || currentUser?.username || '用户'}
+              </Button>
+            </Dropdown>
           </Space>
         </div>
       </Header>

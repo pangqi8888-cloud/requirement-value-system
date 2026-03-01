@@ -1,19 +1,26 @@
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from typing import List
+import csv
+import io
+from datetime import datetime
 from app.db.session import get_db
 from app.models.requirement import Requirement
+from app.models.user import User
 from app.schemas.requirement import RequirementCreate, RequirementResponse, RequirementUpdate
 from app.services.ai_evaluation import ai_service
+from app.services.auth import get_current_active_user
 
 router = APIRouter()
 
 @router.post("/", response_model=RequirementResponse, status_code=201)
 def create_requirement(
     requirement: RequirementCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
 ):
-    """创建需求并进行 AI 评估"""
+    """创建需求并进行 AI 评估（需要登录）"""
 
     # 1. 创建需求对象
     db_requirement = Requirement(**requirement.model_dump())
@@ -45,9 +52,10 @@ def list_requirements(
     limit: int = 100,
     sort_by: str = "total_score",
     order: str = "desc",
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
 ):
-    """获取需求列表，支持排序"""
+    """获取需求列表，支持排序（需要登录）"""
 
     query = db.query(Requirement)
 
@@ -66,8 +74,12 @@ def list_requirements(
     return requirements
 
 @router.get("/{requirement_id}", response_model=RequirementResponse)
-def get_requirement(requirement_id: int, db: Session = Depends(get_db)):
-    """获取单个需求详情"""
+def get_requirement(
+    requirement_id: int, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """获取单个需求详情（需要登录）"""
 
     requirement = db.query(Requirement).filter(Requirement.id == requirement_id).first()
     if not requirement:
@@ -79,9 +91,10 @@ def get_requirement(requirement_id: int, db: Session = Depends(get_db)):
 def update_requirement(
     requirement_id: int,
     requirement_update: RequirementUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
 ):
-    """更新需求"""
+    """更新需求（需要登录）"""
 
     db_requirement = db.query(Requirement).filter(Requirement.id == requirement_id).first()
     if not db_requirement:
@@ -116,8 +129,12 @@ def update_requirement(
     return db_requirement
 
 @router.delete("/{requirement_id}", status_code=204)
-def delete_requirement(requirement_id: int, db: Session = Depends(get_db)):
-    """删除需求"""
+def delete_requirement(
+    requirement_id: int, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """删除需求（需要登录）"""
 
     db_requirement = db.query(Requirement).filter(Requirement.id == requirement_id).first()
     if not db_requirement:
@@ -127,3 +144,58 @@ def delete_requirement(requirement_id: int, db: Session = Depends(get_db)):
     db.commit()
 
     return None
+
+
+@router.get("/export")
+def export_requirements(
+    format: str = "csv",
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """导出需求列表 CSV（需要登录）"""
+    
+    # 获取所有需求
+    requirements = db.query(Requirement).order_by(Requirement.total_score.desc()).all()
+    
+    # 创建 CSV 数据
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # 写入表头
+    writer.writerow([
+        "ID", "标题", "类型", "状态", "综合得分", "普适性", "竞品对比", 
+        "收益潜力", "业务背景", "预期收益", "实现成本", "创建时间", "AI建议"
+    ])
+    
+    # 写入数据
+    for req in requirements:
+        writer.writerow([
+            req.id,
+            req.title,
+            req.type.value if hasattr(req.type, 'value') else req.type,
+            req.status.value if hasattr(req.status, 'value') else req.status,
+            round(req.total_score, 2) if req.total_score else 0,
+            round(req.universality_score, 2) if req.universality_score else 0,
+            round(req.competitor_score, 2) if req.competitor_score else 0,
+            round(req.revenue_score, 2) if req.revenue_score else 0,
+            req.business_background or "",
+            req.expected_benefit or "",
+            req.implementation_cost or "",
+            req.created_at.strftime("%Y-%m-%d %H:%M:%S") if req.created_at else "",
+            (req.ai_recommendation or "")[:500]  # 限制长度
+        ])
+    
+    # 生成文件名
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"requirements_{timestamp}.csv"
+    
+    # 返回 CSV 文件
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f"attachment; filename={filename}",
+            "Content-Type": "text/csv; charset=utf-8-sig"
+        }
+    )
