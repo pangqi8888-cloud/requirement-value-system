@@ -3,11 +3,11 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from datetime import timedelta
 from app.db.session import get_db
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.schemas.user import UserCreate, UserResponse, Token
 from app.services.auth import (
-    verify_password, 
-    get_password_hash, 
+    verify_password,
+    get_password_hash,
     create_access_token,
     ACCESS_TOKEN_EXPIRE_MINUTES,
     get_current_active_user
@@ -26,7 +26,7 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="用户名已存在"
         )
-    
+
     # 检查邮箱是否已注册
     if user_data.email:
         existing_email = db.query(User).filter(User.email == user_data.email).first()
@@ -35,7 +35,11 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="邮箱已被注册"
             )
-    
+
+    # 检查是否是第一个用户，如果是则设为管理员
+    user_count = db.query(User).count()
+    is_first_user = user_count == 0
+
     # 创建新用户
     hashed_password = get_password_hash(user_data.password)
     new_user = User(
@@ -43,13 +47,14 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
         email=user_data.email,
         full_name=user_data.full_name,
         hashed_password=hashed_password,
-        is_active=True
+        is_active=True,
+        role=UserRole.ADMIN if is_first_user else UserRole.VIEWER
     )
-    
+
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
-    
+
     return new_user
 
 

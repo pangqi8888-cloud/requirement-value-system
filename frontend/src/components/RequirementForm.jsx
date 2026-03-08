@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Modal, Form, Input, Select, message } from 'antd';
-import { requirementService } from '../services/api';
+import { requirementService, templateService } from '../services/api';
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -8,10 +8,28 @@ const { Option } = Select;
 const RequirementForm = ({ visible, onClose, onSuccess, editingRequirement = null }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
+  const [templates, setTemplates] = useState([]);
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
   const isEditMode = !!editingRequirement;
 
+  // 获取模版列表
+  useEffect(() => {
+    if (visible && !isEditMode) {
+      fetchTemplates();
+    }
+  }, [visible, isEditMode]);
+
+  const fetchTemplates = async () => {
+    try {
+      const response = await templateService.getTemplates();
+      setTemplates(response.data);
+    } catch (error) {
+      console.error('获取模版列表失败:', error);
+    }
+  };
+
   // 当编辑需求变化时，更新表单
-  React.useEffect(() => {
+  useEffect(() => {
     if (editingRequirement) {
       form.setFieldsValue({
         title: editingRequirement.title,
@@ -23,8 +41,35 @@ const RequirementForm = ({ visible, onClose, onSuccess, editingRequirement = nul
       });
     } else {
       form.resetFields();
+      setSelectedTemplate(null);
     }
   }, [editingRequirement, form]);
+
+  // 应用模版
+  const handleTemplateChange = (templateId) => {
+    if (!templateId) {
+      setSelectedTemplate(null);
+      return;
+    }
+
+    const template = templates.find(t => t.id === templateId);
+    if (template && template.fields_config) {
+      setSelectedTemplate(template);
+
+      // 应用模版的默认值
+      const config = template.fields_config;
+      const values = {};
+
+      Object.keys(config).forEach(field => {
+        if (config[field].default !== undefined && config[field].default !== '') {
+          values[field] = config[field].default;
+        }
+      });
+
+      form.setFieldsValue(values);
+      message.success(`已应用模版：${template.name}`);
+    }
+  };
 
   const handleSubmit = async () => {
     try {
@@ -40,6 +85,7 @@ const RequirementForm = ({ visible, onClose, onSuccess, editingRequirement = nul
       }
 
       form.resetFields();
+      setSelectedTemplate(null);
       onSuccess();
       onClose();
     } catch (error) {
@@ -74,6 +120,22 @@ const RequirementForm = ({ visible, onClose, onSuccess, editingRequirement = nul
           type: 'feature',
         }}
       >
+        {!isEditMode && templates.length > 0 && (
+          <Form.Item label="选择模版（可选）">
+            <Select
+              placeholder="选择一个模版快速填充表单"
+              allowClear
+              onChange={handleTemplateChange}
+            >
+              {templates.map(template => (
+                <Option key={template.id} value={template.id}>
+                  {template.name} {template.is_default && '(默认)'}
+                </Option>
+              ))}
+            </Select>
+          </Form.Item>
+        )}
+
         <Form.Item
           label="需求标题"
           name="title"

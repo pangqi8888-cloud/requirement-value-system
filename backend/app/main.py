@@ -1,13 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
-from app.api import requirements
-from app.api import auth
+from app.api import requirements, auth, users, templates
 from app.db.session import engine, Base
 
 # 导入所有模型，确保表被创建
-from app.models import requirement
-from app.models import user
+from app.models import requirement, user, template
 
 # 创建数据库表
 Base.metadata.create_all(bind=engine)
@@ -39,6 +37,18 @@ app.include_router(
     requirements.router,
     prefix=f"{settings.API_V1_STR}/requirements",
     tags=["requirements"]
+)
+
+app.include_router(
+    users.router,
+    prefix=f"{settings.API_V1_STR}",
+    tags=["用户管理"]
+)
+
+app.include_router(
+    templates.router,
+    prefix=f"{settings.API_V1_STR}",
+    tags=["需求模版"]
 )
 
 @app.get("/")

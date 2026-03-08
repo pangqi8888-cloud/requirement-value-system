@@ -1,5 +1,6 @@
 from pydantic import BaseModel, EmailStr
 from typing import Optional
+from app.models.user import UserRole
 
 
 class UserBase(BaseModel):
@@ -21,9 +22,14 @@ class UserResponse(UserBase):
     id: int
     is_active: bool
     is_superuser: bool
+    role: UserRole
 
     class Config:
         from_attributes = True
+
+
+class UserRoleUpdate(BaseModel):
+    role: UserRole
 
 
 class Token(BaseModel):

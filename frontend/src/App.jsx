@@ -3,20 +3,22 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ConfigProvider } from 'antd';
 import RequirementList from './pages/RequirementList';
 import Login from './pages/Login';
+import UserManagement from './pages/UserManagement';
+import TemplateManagement from './pages/TemplateManagement';
 import { authService } from './services/api';
 
 // 私有路由组件
 const PrivateRoute = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(null);
-  
+
   useEffect(() => {
     setIsAuthenticated(authService.isAuthenticated());
   }, []);
-  
+
   if (isAuthenticated === null) {
     return <div>加载中...</div>;
   }
-  
+
   return isAuthenticated ? children : <Navigate to="/login" />;
 };
 
@@ -42,13 +44,29 @@ function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/logout" element={<Logout />} />
-          <Route 
-            path="/" 
+          <Route
+            path="/"
             element={
               <PrivateRoute>
                 <RequirementList />
               </PrivateRoute>
-            } 
+            }
+          />
+          <Route
+            path="/users"
+            element={
+              <PrivateRoute>
+                <UserManagement />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/templates"
+            element={
+              <PrivateRoute>
+                <TemplateManagement />
+              </PrivateRoute>
+            }
           />
         </Routes>
       </BrowserRouter>

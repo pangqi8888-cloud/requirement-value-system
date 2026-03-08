@@ -12,7 +12,9 @@ const Login = () => {
     setLoading(true);
     try {
       await authService.login(values.username, values.password);
-      message.success('登录成功！');
+      const user = authService.getUser();
+      const roleText = user.role === 'admin' ? '管理员' : user.role === 'editor' ? '编辑者' : '查看者';
+      message.success(`登录成功！当前角色：${roleText}`);
       navigate('/');
     } catch (error) {
       console.error('登录失败:', error);

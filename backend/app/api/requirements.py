@@ -7,10 +7,10 @@ import io
 from datetime import datetime
 from app.db.session import get_db
 from app.models.requirement import Requirement
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.schemas.requirement import RequirementCreate, RequirementResponse, RequirementUpdate
 from app.services.ai_evaluation import ai_service
-from app.services.auth import get_current_active_user
+from app.services.auth import get_current_active_user, require_editor_or_above
 
 router = APIRouter()
 
@@ -18,12 +18,13 @@ router = APIRouter()
 def create_requirement(
     requirement: RequirementCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_editor_or_above)
 ):
-    """创建需求并进行 AI 评估（需要登录）"""
+    """创建需求并进行 AI 评估（需要编辑者或管理员权限）"""
 
     # 1. 创建需求对象
     db_requirement = Requirement(**requirement.model_dump())
+    db_requirement.created_by = current_user.id
 
     # 2. AI 评估
     evaluation = ai_service.evaluate_requirement(requirement.model_dump())
@@ -146,9 +147,9 @@ def update_requirement(
     requirement_id: int,
     requirement_update: RequirementUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_editor_or_above)
 ):
-    """更新需求（需要登录）"""
+    """更新需求（需要编辑者或管理员权限）"""
 
     db_requirement = db.query(Requirement).filter(Requirement.id == requirement_id).first()
     if not db_requirement:
@@ -184,15 +185,22 @@ def update_requirement(
 
 @router.delete("/{requirement_id}", status_code=204)
 def delete_requirement(
-    requirement_id: int, 
+    requirement_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_editor_or_above)
 ):
-    """删除需求（需要登录）"""
+    """删除需求（编辑者只能删除自己的，管理员可以删除任何需求）"""
 
     db_requirement = db.query(Requirement).filter(Requirement.id == requirement_id).first()
     if not db_requirement:
         raise HTTPException(status_code=404, detail="需求不存在")
+
+    # 编辑者只能删除自己创建的需求
+    if current_user.role == UserRole.EDITOR and db_requirement.created_by != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="您只能删除自己创建的需求"
+        )
 
     db.delete(db_requirement)
     db.commit()

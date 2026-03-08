@@ -126,4 +126,34 @@ export const requirementService = {
   },
 };
 
+// 用户管理服务
+export const userService = {
+  // 获取所有用户
+  getUsers: () => api.get('/users/'),
+
+  // 更新用户角色
+  updateUserRole: (userId, role) => api.put(`/users/${userId}/role`, { role }),
+
+  // 删除用户
+  deleteUser: (userId) => api.delete(`/users/${userId}`),
+};
+
+// 模版服务
+export const templateService = {
+  // 创建模版
+  createTemplate: (data) => api.post('/templates/', data),
+
+  // 获取模版列表
+  getTemplates: () => api.get('/templates/'),
+
+  // 获取单个模版
+  getTemplate: (id) => api.get(`/templates/${id}`),
+
+  // 更新模版
+  updateTemplate: (id, data) => api.put(`/templates/${id}`, data),
+
+  // 删除模版
+  deleteTemplate: (id) => api.delete(`/templates/${id}`),
+};
+
 export default api;

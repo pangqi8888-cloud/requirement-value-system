@@ -82,8 +82,23 @@ const RequirementList = () => {
     {
       key: 'profile',
       icon: <UserOutlined />,
-      label: currentUser?.full_name || currentUser?.username || '用户',
+      label: `${currentUser?.full_name || currentUser?.username || '用户'} (${currentUser?.role === 'admin' ? '管理员' : currentUser?.role === 'editor' ? '编辑者' : '查看者'})`,
       disabled: true,
+    },
+    {
+      type: 'divider',
+    },
+    ...(currentUser?.role === 'admin' ? [{
+      key: 'users',
+      icon: <UserOutlined />,
+      label: '用户管理',
+      onClick: () => navigate('/users'),
+    }] : []),
+    {
+      key: 'templates',
+      icon: <UserOutlined />,
+      label: '模版管理',
+      onClick: () => navigate('/templates'),
     },
     {
       type: 'divider',
@@ -113,6 +128,12 @@ const RequirementList = () => {
   };
 
   const handleDelete = async (id) => {
+    // 检查权限
+    if (currentUser?.role === 'viewer') {
+      message.error('您没有删除权限');
+      return;
+    }
+
     Modal.confirm({
       title: '确认删除',
       content: '确定要删除这个需求吗？',
@@ -125,7 +146,7 @@ const RequirementList = () => {
           fetchRequirements();
         } catch (error) {
           console.error('删除失败:', error);
-          message.error('删除失败');
+          message.error(error.response?.data?.detail || '删除失败');
         }
       },
     });
@@ -264,21 +285,25 @@ const RequirementList = () => {
           >
             查看
           </Button>
-          <Button
-            type="link"
-            icon={<EditOutlined />}
-            onClick={() => handleEdit(record)}
-          >
-            编辑
-          </Button>
-          <Button
-            type="link"
-            danger
-            icon={<DeleteOutlined />}
-            onClick={() => handleDelete(record.id)}
-          >
-            删除
-          </Button>
+          {currentUser?.role !== 'viewer' && (
+            <>
+              <Button
+                type="link"
+                icon={<EditOutlined />}
+                onClick={() => handleEdit(record)}
+              >
+                编辑
+              </Button>
+              <Button
+                type="link"
+                danger
+                icon={<DeleteOutlined />}
+                onClick={() => handleDelete(record.id)}
+              >
+                删除
+              </Button>
+            </>
+          )}
         </Space>
       ),
     },
@@ -307,13 +332,15 @@ const RequirementList = () => {
             >
               导出
             </Button>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => setFormVisible(true)}
-            >
-              创建需求
-            </Button>
+            {currentUser?.role !== 'viewer' && (
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => setFormVisible(true)}
+              >
+                创建需求
+              </Button>
+            )}
             <Button icon={<ReloadOutlined />} onClick={fetchRequirements}>
               刷新
             </Button>

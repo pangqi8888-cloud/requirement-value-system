@@ -7,7 +7,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from app.db.session import get_db
-from app.models.user import User
+from app.models.user import User, UserRole
 
 # JWT 配置 - 从环境变量读取
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
@@ -57,7 +57,7 @@ def get_current_user(
             raise credentials_exception
     except JWTError:
         raise credentials_exception
-    
+
     user = db.query(User).filter(User.username == username).first()
     if user is None:
         raise credentials_exception
@@ -68,4 +68,24 @@ def get_current_active_user(current_user: User = Depends(get_current_user)) -> U
     """获取当前活跃用户"""
     if not current_user.is_active:
         raise HTTPException(status_code=400, detail="用户已被禁用")
+    return current_user
+
+
+def require_admin(current_user: User = Depends(get_current_active_user)) -> User:
+    """要求管理员权限"""
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="需要管理员权限"
+        )
+    return current_user
+
+
+def require_editor_or_above(current_user: User = Depends(get_current_active_user)) -> User:
+    """要求编辑者或以上权限"""
+    if current_user.role not in [UserRole.ADMIN, UserRole.EDITOR]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="需要编辑者或管理员权限"
+        )
     return current_user

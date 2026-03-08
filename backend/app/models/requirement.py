@@ -1,5 +1,6 @@
-from sqlalchemy import Column, Integer, String, Text, Float, DateTime, Enum as SQLEnum
+from sqlalchemy import Column, Integer, String, Text, Float, DateTime, Enum as SQLEnum, ForeignKey
 from sqlalchemy.sql import func
+from sqlalchemy.orm import relationship
 from app.db.session import Base
 import enum
 
@@ -28,7 +29,7 @@ class Requirement(Base):
     business_background = Column(Text)  # 业务背景
     expected_benefit = Column(Text)  # 预期收益
     implementation_cost = Column(String(500))  # 实现成本估算（手动输入）
-    
+
     # 以下字段保留但新表单不再使用（兼容旧数据）
     target_users = Column(String(500))  # 目标用户
     affected_user_count = Column(Integer)  # 影响用户数
@@ -47,6 +48,9 @@ class Requirement(Base):
     user_impact_score = Column(Float, default=0.0)  # 用户影响得分
     cost_score = Column(Float, default=0.0)  # 成本得分
     urgency_score = Column(Float, default=0.0)  # 紧急程度得分
+
+    # 创建者
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
