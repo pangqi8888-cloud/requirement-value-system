@@ -73,9 +73,63 @@ def list_requirements(
     requirements = query.offset(skip).limit(limit).all()
     return requirements
 
+@router.get("/export")
+def export_requirements(
+    format: str = "csv",
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """导出需求列表 CSV（需要登录）"""
+
+    # 获取所有需求
+    requirements = db.query(Requirement).order_by(Requirement.total_score.desc()).all()
+
+    # 创建 CSV 数据
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    # 写入表头
+    writer.writerow([
+        "ID", "标题", "类型", "状态", "综合得分", "普适性", "竞品对比",
+        "收益潜力", "业务背景", "预期收益", "实现成本", "创建时间", "AI建议"
+    ])
+
+    # 写入数据
+    for req in requirements:
+        writer.writerow([
+            req.id,
+            req.title,
+            req.type.value if hasattr(req.type, 'value') else req.type,
+            req.status.value if hasattr(req.status, 'value') else req.status,
+            round(req.total_score, 2) if req.total_score else 0,
+            round(req.universality_score, 2) if req.universality_score else 0,
+            round(req.competitor_score, 2) if req.competitor_score else 0,
+            round(req.revenue_score, 2) if req.revenue_score else 0,
+            req.business_background or "",
+            req.expected_benefit or "",
+            req.implementation_cost or "",
+            req.created_at.strftime("%Y-%m-%d %H:%M:%S") if req.created_at else "",
+            (req.ai_recommendation or "")[:500]  # 限制长度
+        ])
+
+    # 生成文件名
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"requirements_{timestamp}.csv"
+
+    # 返回 CSV 文件
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f"attachment; filename={filename}",
+            "Content-Type": "text/csv; charset=utf-8-sig"
+        }
+    )
+
 @router.get("/{requirement_id}", response_model=RequirementResponse)
 def get_requirement(
-    requirement_id: int, 
+    requirement_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
@@ -145,57 +199,3 @@ def delete_requirement(
 
     return None
 
-
-@router.get("/export")
-def export_requirements(
-    format: str = "csv",
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
-):
-    """导出需求列表 CSV（需要登录）"""
-    
-    # 获取所有需求
-    requirements = db.query(Requirement).order_by(Requirement.total_score.desc()).all()
-    
-    # 创建 CSV 数据
-    output = io.StringIO()
-    writer = csv.writer(output)
-    
-    # 写入表头
-    writer.writerow([
-        "ID", "标题", "类型", "状态", "综合得分", "普适性", "竞品对比", 
-        "收益潜力", "业务背景", "预期收益", "实现成本", "创建时间", "AI建议"
-    ])
-    
-    # 写入数据
-    for req in requirements:
-        writer.writerow([
-            req.id,
-            req.title,
-            req.type.value if hasattr(req.type, 'value') else req.type,
-            req.status.value if hasattr(req.status, 'value') else req.status,
-            round(req.total_score, 2) if req.total_score else 0,
-            round(req.universality_score, 2) if req.universality_score else 0,
-            round(req.competitor_score, 2) if req.competitor_score else 0,
-            round(req.revenue_score, 2) if req.revenue_score else 0,
-            req.business_background or "",
-            req.expected_benefit or "",
-            req.implementation_cost or "",
-            req.created_at.strftime("%Y-%m-%d %H:%M:%S") if req.created_at else "",
-            (req.ai_recommendation or "")[:500]  # 限制长度
-        ])
-    
-    # 生成文件名
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"requirements_{timestamp}.csv"
-    
-    # 返回 CSV 文件
-    output.seek(0)
-    return StreamingResponse(
-        iter([output.getvalue()]),
-        media_type="text/csv",
-        headers={
-            "Content-Disposition": f"attachment; filename={filename}",
-            "Content-Type": "text/csv; charset=utf-8-sig"
-        }
-    )

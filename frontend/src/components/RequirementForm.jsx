@@ -5,29 +5,51 @@ import { requirementService } from '../services/api';
 const { TextArea } = Input;
 const { Option } = Select;
 
-const RequirementForm = ({ visible, onClose, onSuccess }) => {
+const RequirementForm = ({ visible, onClose, onSuccess, editingRequirement = null }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
+  const isEditMode = !!editingRequirement;
+
+  // 当编辑需求变化时，更新表单
+  React.useEffect(() => {
+    if (editingRequirement) {
+      form.setFieldsValue({
+        title: editingRequirement.title,
+        type: editingRequirement.type,
+        description: editingRequirement.description,
+        business_background: editingRequirement.business_background,
+        expected_benefit: editingRequirement.expected_benefit,
+        implementation_cost: editingRequirement.implementation_cost,
+      });
+    } else {
+      form.resetFields();
+    }
+  }, [editingRequirement, form]);
 
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
       setLoading(true);
 
-      await requirementService.createRequirement(values);
+      if (isEditMode) {
+        await requirementService.updateRequirement(editingRequirement.id, values);
+        message.success('需求更新成功，AI 重新评估已完成！');
+      } else {
+        await requirementService.createRequirement(values);
+        message.success('需求创建成功，AI 评估已完成！');
+      }
 
-      message.success('需求创建成功，AI 评估已完成！');
       form.resetFields();
       onSuccess();
       onClose();
     } catch (error) {
-      console.error('创建失败:', error);
+      console.error(isEditMode ? '更新失败:' : '创建失败:', error);
       if (error.response) {
-        message.error(`创建失败: ${error.response.data.detail || '未知错误'}`);
+        message.error(`${isEditMode ? '更新' : '创建'}失败: ${error.response.data.detail || '未知错误'}`);
       } else if (error.errorFields) {
         message.error('请检查表单填写');
       } else {
-        message.error('创建失败，请重试');
+        message.error(`${isEditMode ? '更新' : '创建'}失败，请重试`);
       }
     } finally {
       setLoading(false);
@@ -36,13 +58,13 @@ const RequirementForm = ({ visible, onClose, onSuccess }) => {
 
   return (
     <Modal
-      title="创建新需求"
+      title={isEditMode ? "编辑需求" : "创建新需求"}
       open={visible}
       onOk={handleSubmit}
       onCancel={onClose}
       confirmLoading={loading}
       width={800}
-      okText="创建并评估"
+      okText={isEditMode ? "保存并重新评估" : "创建并评估"}
       cancelText="取消"
     >
       <Form

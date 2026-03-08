@@ -19,6 +19,7 @@ import {
   PlusOutlined,
   ReloadOutlined,
   EyeOutlined,
+  EditOutlined,
   DeleteOutlined,
   ExportOutlined,
   LogoutOutlined,
@@ -36,6 +37,7 @@ const RequirementList = () => {
   const [requirements, setRequirements] = useState([]);
   const [loading, setLoading] = useState(false);
   const [formVisible, setFormVisible] = useState(false);
+  const [editingRequirement, setEditingRequirement] = useState(null);
   const [detailVisible, setDetailVisible] = useState(false);
   const [selectedRequirement, setSelectedRequirement] = useState(null);
   const [sortBy, setSortBy] = useState('total_score');
@@ -132,6 +134,16 @@ const RequirementList = () => {
   const handleViewDetail = async (record) => {
     setSelectedRequirement(record);
     setDetailVisible(true);
+  };
+
+  const handleEdit = (record) => {
+    setEditingRequirement(record);
+    setFormVisible(true);
+  };
+
+  const handleCloseForm = () => {
+    setFormVisible(false);
+    setEditingRequirement(null);
   };
 
   const getTypeTag = (type) => {
@@ -241,7 +253,7 @@ const RequirementList = () => {
     {
       title: '操作',
       key: 'action',
-      width: 150,
+      width: 200,
       fixed: 'right',
       render: (_, record) => (
         <Space>
@@ -251,6 +263,13 @@ const RequirementList = () => {
             onClick={() => handleViewDetail(record)}
           >
             查看
+          </Button>
+          <Button
+            type="link"
+            icon={<EditOutlined />}
+            onClick={() => handleEdit(record)}
+          >
+            编辑
           </Button>
           <Button
             type="link"
@@ -363,11 +382,12 @@ const RequirementList = () => {
         </Card>
       </Content>
 
-      {/* 创建需求表单 */}
+      {/* 创建/编辑需求表单 */}
       <RequirementForm
         visible={formVisible}
-        onClose={() => setFormVisible(false)}
+        onClose={handleCloseForm}
         onSuccess={fetchRequirements}
+        editingRequirement={editingRequirement}
       />
 
       {/* 需求详情 */}
