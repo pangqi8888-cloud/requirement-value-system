@@ -15,8 +15,8 @@ class Settings(BaseSettings):
         "http://localhost:5173",
     ]
 
-    # CORS 正则表达式 - 支持所有 onrender.com 子域名
-    BACKEND_CORS_ORIGIN_REGEX: str = r"https://.*\.onrender\.com"
+    # CORS 正则表达式 - 支持 Render 和 Zeabur 部署域名
+    BACKEND_CORS_ORIGIN_REGEX: str = r"https://.*\.(onrender\.com|zeabur\.app)"
 
     # JWT 密钥配置
     SECRET_KEY: str = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
