@@ -1,10 +1,11 @@
 import json
+import os
 import requests
 from typing import Dict
 from app.schemas.requirement import EvaluationScore
 
-# 千问 API 配置
-QWEN_API_KEY = "sk-929c71ee1b344b32a1a5373351039a34"
+# 千问 API 配置 - 从环境变量读取
+QWEN_API_KEY = os.getenv("QWEN_API_KEY", "sk-929c71ee1b344b32a1a5373351039a34")
 QWEN_API_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
 MODEL_NAME = "qwen-turbo"
 

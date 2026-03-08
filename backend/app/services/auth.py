@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 from typing import Optional
+import os
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
@@ -8,8 +9,8 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.models.user import User
 
-# JWT 配置
-SECRET_KEY = "your-secret-key-change-in-production"
+# JWT 配置 - 从环境变量读取
+SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
 
